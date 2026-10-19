@@ -16,6 +16,7 @@ A language model is a file of numbers. It doesn't write anything; it scores how 
 | `held-back-objects.txt` | 1,536 objects never used in training. The scripts test on the first 300. |
 | `train.py` | Tokenizes on spaces, trains the model, saves it to `model/`, prints the safetensors header. |
 | `evaluate.py` | Runs greedy and beam-4 decoding on 300 held-back objects, reports the fork probabilities, scores all seven descriptions of each object, and runs the forced-first-word check. |
+| `describe.py` | Try the model yourself: pick an object, see what greedy and beam search write, the probabilities for the word after *a*, and the scores for all seven descriptions. See "Trying the model yourself" below. |
 | `check_length_penalty.py` | Confirms that beam search honours `length_penalty` (transformers prints a warning that it "may be ignored"; it isn't). |
 | `model/` | The trained model: `model.safetensors` (121,712 bytes), `config.json`, `generation_config.json`. |
 | `vocab.json` | The 47-token vocabulary (46 words and punctuation marks plus `<pad>`). |
@@ -66,6 +67,47 @@ python check_length_penalty.py     # optional
 Your numbers will differ a little from the table above. Training starts from random weights, so a retrained model learns slightly different probabilities. The pattern holds: greedy low, beam search near the model's own ranking, forced first word clean every time. Across the runs I've done, greedy has landed anywhere from 2% to 19% clean and beam search from 85% to 98%.
 
 The original run used Python 3.14.6, torch 2.14.1, transformers 5.20.1, and safetensors 0.8.0.
+
+## Trying the model yourself
+
+`describe.py` loads the committed model and lets you hand it objects. It needs the same venv as the scripts above (torch and transformers), but it doesn't need you to retrain anything.
+
+```sh
+python describe.py                                 # a random held-back object
+python describe.py slot twisted glass crown        # noun shape material name
+python describe.py cup round steel needle --force round   # you pick the word after "a", greedy finishes
+python describe.py --random 5                      # five random held-back objects
+python describe.py --words                         # the 46 words the model knows
+```
+
+For each object it prints the prompt, what greedy decoding writes, what beam search writes, the model's probabilities for the word after *a*, and its probability for each of the seven well-formed descriptions, with the one greedy wrote marked. For example:
+
+```
+=== twisted glass slot called the crown  (held back from training) ===
+
+prompt:  facts : twisted ; slot ; glass ; called the crown ; describe : a
+greedy:  a slot , glass , twisted , called the crown .
+beam-4:  a twisted glass slot called the crown .
+
+the word after 'a', by probability:
+     0.812  slot
+     0.184  twisted
+     0.001  rod
+
+the seven well-formed descriptions, by whole-sentence probability:
+     0.184  a twisted glass slot called the crown .
+     0.161  a slot , glass , twisted , called the crown .   <- what greedy wrote
+     0.151  a slot , twisted , glass , called the crown .
+     ...
+```
+
+Two things to know. The model only knows 46 words, so an object has to be built from the four lists (`--words` prints them); anything else gets refused. And the order of the facts in the prompt changes the probabilities a little, because the model reads the whole prompt. `describe.py` shuffles the facts (pass `--seed` to make the shuffle repeatable), so your numbers for the crown won't match the article's table exactly. To reproduce the article's numbers for that object, give it the exact prompt the evaluation used:
+
+```sh
+python describe.py --facts "called the crown ; twisted ; slot ; glass ;"
+```
+
+You can also write the facts as sentences, the other format in the training text: `--facts "it is glass . it is a slot . it is twisted . it is called the crown ."`
 
 ## The training text
 
