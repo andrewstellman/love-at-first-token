@@ -64,7 +64,7 @@ python check_length_penalty.py     # optional
 
 `train.py` overwrites `model/` and starts a new `REPORT.md` in the repo root. The original run's report is kept in `results/REPORT.md`, and the original model is the one committed in `model/`, so if you want to keep it, copy it somewhere before retraining. To evaluate the committed model without retraining, run `evaluate.py` on its own.
 
-Your numbers will differ a little from the table above. Training starts from random weights, so a retrained model learns slightly different probabilities. The pattern holds: greedy low, beam search near the model's own ranking, forced first word clean every time. Across the runs I've done, greedy has landed anywhere from 2% to 19% clean and beam search from 85% to 98%.
+With the committed training text and the fixed seed in `train.py`, a retrain on a CPU should reproduce the model file and the numbers above exactly; the only thing that varies is the training time. If you change the seed, the split, or the text, you'll get slightly different probabilities. The pattern holds either way: greedy low, beam search near the model's own ranking, forced first word clean every time.
 
 The original run used Python 3.14.6, torch 2.14.1, transformers 5.20.1, and safetensors 0.8.0.
 
